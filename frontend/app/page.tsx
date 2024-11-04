@@ -7,7 +7,7 @@ interface Data {
 }
 
 async function fetchData(): Promise<Data> {
-  const response = await fetch("http://localhost:8000/api/example/"); // Replace with your actual API endpoint
+  const response = await fetch("http://localhost:8000/api/example/"); 
   if (!response.ok) {
     throw new Error("Network response was not ok");
   }
@@ -31,7 +31,7 @@ const Home: React.FC = async () => {
         <div>
           <h1>Message from Django API:</h1>
           <p>{data.message}</p>{" "}
-          {/* Assuming your Django API returns an object with a 'message' property */}
+
         </div>
       ) : (
         <p>Loading...</p>
