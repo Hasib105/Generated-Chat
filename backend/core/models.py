@@ -20,7 +20,7 @@ class User(Document):
 
     def save(self, *args, **kwargs):
         if self.password:
-            self.password = make_password(self.password)
+            self.password = make_password(self.password)  
         super(User, self).save(*args, **kwargs)
 
 class ChatThread(Document):

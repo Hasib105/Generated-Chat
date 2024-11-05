@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
-from core.models import User  
+from core.models import User  , ChatThread, ChatMessage
 
 # Serializer for User Registration
 class UserRegisterSerializer(serializers.Serializer):
@@ -9,20 +9,17 @@ class UserRegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, style={'input_type': 'password'}, min_length=8)
     retype_password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
-    def create(self, validated_data):
-        validated_data['password'] = make_password(validated_data['password'])  
-        user = User(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password']
-        )
-        user.save()
-        return user
-
     def validate(self, attrs):
         if attrs['password'] != attrs['retype_password']:
             raise serializers.ValidationError("Passwords do not match.")
         return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('retype_password')  
+        user = User(**validated_data)  
+        user.clean()  
+        user.save()  
+        return user
 
 # Serializer for User Login
 class UserLoginSerializer(serializers.Serializer):
@@ -30,7 +27,32 @@ class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
     def validate(self, attrs):
-        user = User.objects(username=attrs['username']).first()
-        if user and check_password(attrs['password'], user.password):
-            return user
-        raise serializers.ValidationError("Invalid username or password.")
+        username = attrs.get('username')
+        password = attrs.get('password')
+
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Invalid username or password.")
+
+        print(check_password(password, user.password),'----------------')
+        
+        if not check_password(password, user.password):
+            raise serializers.ValidationError("Invalid username or password.")
+
+        return user
+
+
+class UserSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+
+class ChatThreadSerializer(serializers.Serializer):
+    class Meta:
+        model = ChatThread
+        fields = ['id', 'title', 'user', 'created_at']
+
+class ChatMessageSerializer(serializers.Serializer):
+    class Meta:
+        model = ChatMessage
+        fields = ['id', 'thread', 'user', 'message', 'response', 'timestamp', 'slug']
