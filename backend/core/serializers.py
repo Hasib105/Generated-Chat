@@ -1,12 +1,13 @@
 from rest_framework import serializers
-from core.mongo_models import User
 from django.contrib.auth.hashers import make_password, check_password
+from core.models import User  
 
+# Serializer for User Registration
 class UserRegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, min_length=8)
-    retype_password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'}, min_length=8)
+    retype_password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
     def create(self, validated_data):
         validated_data['password'] = make_password(validated_data['password'])  
@@ -23,11 +24,10 @@ class UserRegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("Passwords do not match.")
         return attrs
 
-
 # Serializer for User Login
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
     def validate(self, attrs):
         user = User.objects(username=attrs['username']).first()

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-
+from mongoengine import  connect
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -60,6 +60,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
+# MongoDB configuration
+MONGO_DB_CONFIG = {
+    'NAME': os.environ.get('MONGO_DB_NAME'),
+    'USER': os.environ.get('MONGO_DB_USER'),
+    'PASSWORD': os.environ.get('MONGO_DB_PASSWORD'),
+    'HOST': os.environ.get('MONGO_DB_HOST'),
+    'PORT': os.environ.get('MONGO_DB_PORT'),
+}
+
+# Connect to MongoDB using MongoEngine
+if all(MONGO_DB_CONFIG.values()):
+    connect(
+        host=f"mongodb://{MONGO_DB_CONFIG['USER']}:{MONGO_DB_CONFIG['PASSWORD']}@{MONGO_DB_CONFIG['HOST']}:{MONGO_DB_CONFIG['PORT']}/{MONGO_DB_CONFIG['NAME']}?authSource=admin"
+    )
+else:
+    raise ValueError("MongoDB configuration is incomplete.")
 
 
 
@@ -102,3 +118,10 @@ MEDIA_ROOT = BASE_DIR / 'mediafiles'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
