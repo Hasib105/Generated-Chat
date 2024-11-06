@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from mongoengine import  connect
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -121,7 +122,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'core.custom_auth_backend.MongoDBJWTAuthentication',
+    ],
+   
 }
+
+
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'id',  
+    'USER_ID_CLAIM': 'user_id',
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=3),
+}
+
+AUTHENTICATION_BACKENDS = ['core.custom_auth.MongoBackend']

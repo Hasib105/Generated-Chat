@@ -19,7 +19,7 @@ export default function Login() {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
-    setLoginError(null); // Reset error state
+    setLoginError(null); 
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -28,9 +28,8 @@ export default function Login() {
 
     if (response.ok) {
       const result = await response.json();
-      // Set cookies instead of localStorage
-      Cookies.set("access_token", result.access, { expires: 7 }); // 7 days expiration
-      Cookies.set("refresh_token", result.refresh, { expires: 7 });
+      Cookies.set("access_token", result.access, { expires: 2 }); 
+      Cookies.set("refresh_token", result.refresh, { expires: 2 });
 
       router.push("/");
     } else {

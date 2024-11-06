@@ -23,6 +23,10 @@ class User(Document):
             self.password = make_password(self.password)  
         super(User, self).save(*args, **kwargs)
 
+    @property
+    def is_authenticated(self):
+        return True  
+
 class ChatThread(Document):
     title = StringField(max_length=100)
     user = ReferenceField(User, null=True, reverse_delete_rule=4)  

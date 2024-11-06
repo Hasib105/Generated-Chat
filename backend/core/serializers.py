@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
-from core.models import User  , ChatThread, ChatMessage
+from core.models import User, ChatThread, ChatMessage
 
 # Serializer for User Registration
 class UserRegisterSerializer(serializers.Serializer):
@@ -34,9 +34,7 @@ class UserLoginSerializer(serializers.Serializer):
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid username or password.")
-
-        print(check_password(password, user.password),'----------------')
-        
+    
         if not check_password(password, user.password):
             raise serializers.ValidationError("Invalid username or password.")
 
@@ -44,15 +42,19 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
+    username = serializers.CharField()
     email = serializers.EmailField()
+    created_at = serializers.DateTimeField()
 
 class ChatThreadSerializer(serializers.Serializer):
-    class Meta:
-        model = ChatThread
-        fields = ['id', 'title', 'user', 'created_at']
+    title = serializers.CharField()
+    user = UserSerializer(read_only=True)
+    created_at = serializers.DateTimeField()
 
 class ChatMessageSerializer(serializers.Serializer):
-    class Meta:
-        model = ChatMessage
-        fields = ['id', 'thread', 'user', 'message', 'response', 'timestamp', 'slug']
+    thread = ChatThreadSerializer(read_only=True)
+    user = UserSerializer(read_only=True)
+    message = serializers.CharField()
+    response = serializers.CharField()
+    timestamp = serializers.DateTimeField()
+    slug = serializers.CharField()
