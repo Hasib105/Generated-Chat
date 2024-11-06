@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Cookies from "js-cookie"; // Import js-cookie
+import Cookies from "js-cookie";
 import LogoutButton from "./LogoutButton";
 
 interface Message {
@@ -10,18 +10,19 @@ interface Message {
 }
 
 interface Thread {
-  id: string;
+  slug: string;
   title: string;
 }
 
 const ChatApp: React.FC = () => {
   const [threads, setThreads] = useState<Thread[]>([]);
-  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [currentThreadSlug, setCurrentThreadSlug] = useState<string | null>(
+    localStorage.getItem("lastThreadSlug") || null
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>("");
   const [newThreadTitle, setNewThreadTitle] = useState<string>("");
 
-  // Retrieve the access token from cookies
   const accessToken = Cookies.get("access_token");
 
   useEffect(() => {
@@ -29,14 +30,14 @@ const ChatApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (currentThreadId) {
-      fetchMessages(currentThreadId);
+    if (currentThreadSlug) {
+      fetchMessages(currentThreadSlug);
     }
-  }, [currentThreadId]);
+  }, [currentThreadSlug]);
 
   const fetchThreads = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/threads", {
+      const response = await axios.get("http://127.0.0.1:8000/api/threads/", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -47,10 +48,10 @@ const ChatApp: React.FC = () => {
     }
   };
 
-  const fetchMessages = async (threadId: string) => {
+  const fetchMessages = async (threadSlug: string) => {
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/threads/${threadId}/messages/`,
+        `http://127.0.0.1:8000/api/threads/${threadSlug}/messages/`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -58,40 +59,108 @@ const ChatApp: React.FC = () => {
         }
       );
       setMessages(
-        response.data.map((msg: any) => ({
-          sender: msg.user === null ? "Assistant" : "User",
-          text: msg.message || msg.response,
-        }))
+        response.data.flatMap((msg: any) => [
+          { sender: "User", text: msg.message },
+          { sender: "Assistant", text: msg.response },
+        ])
       );
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
   };
 
-  const handleSend = async () => {
-    if (newMessage.trim() && currentThreadId) {
-      const userMessage = { sender: "User", text: newMessage };
-      setMessages((prevMessages) => [...prevMessages, userMessage]);
-      setNewMessage("");
+  const selectThread = (slug: string) => {
+    if (slug !== currentThreadSlug) {
+      setCurrentThreadSlug(slug);
+      localStorage.setItem("lastThreadSlug", slug);
+      setMessages([]);
+    }
+  };
 
-      try {
-        const response = await axios.post(
-          `/api/threads/${currentThreadId}/chat/`,
-          { question: newMessage },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`, // Add Authorization header
-            },
+  const handleSend = async () => {
+    if (newMessage.trim()) {
+      if (currentThreadSlug) {
+        const userMessage = { sender: "User", text: newMessage };
+        setMessages((prevMessages) => [...prevMessages, userMessage]);
+        setNewMessage("");
+
+        try {
+          const response = await axios.post(
+            `http://127.0.0.1:8000/api/threads/${currentThreadSlug}/chat/`,
+            { question: newMessage },
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          if (response.status === 201 ) {
+            const assistantMessage = {
+              sender: "Assistant",
+              text: response.data.response,
+            };
+            setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+          } else {
+            console.error(
+              "Failed to get a valid response from the server:",
+              response.data.error || "No response data"
+            );
           }
-        );
-        const assistantMessage = {
-          sender: "Assistant",
-          text: response.data.response,
-        };
-        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-      } catch (error) {
-        console.error("Error sending message:", error);
+        } catch (error) {
+          console.error(
+            "Error sending message:",
+            error.response ? error.response.data : error.message
+          );
+        }
+      } else {
+        try {
+          const response = await axios.post(
+            "http://127.0.0.1:8000/api/threads/",
+            { title: newMessage },
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          const newThread = response.data;
+          setThreads((prevThreads) => [newThread, ...prevThreads]);
+          setCurrentThreadSlug(newThread.slug);
+          setMessages([]);
+          const userMessage = { sender: "User", text: newMessage };
+          setMessages((prevMessages) => [...prevMessages, userMessage]);
+          setNewMessage("");
+
+          const assistantResponse = await axios.post(
+            `http://127.0.0.1:8000/api/threads/${newThread.slug}/chat/`,
+            { question: newMessage },
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          if (assistantResponse.status === 201) {
+            const assistantMessage = {
+              sender: "Assistant",
+              text: assistantResponse.data.response,
+            };
+            setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+          } else {
+            console.error(
+              "Failed to get a valid response from the server:",
+              assistantResponse.data.error || "No response data"
+            );
+          }
+        } catch (error) {
+          console.error("Error creating new thread:", error);
+        }
       }
+    } else {
+      console.warn("Cannot send an empty message.");
     }
   };
 
@@ -99,19 +168,17 @@ const ChatApp: React.FC = () => {
     if (newThreadTitle.trim()) {
       try {
         const response = await axios.post(
-          "http://127.0.0.1:8000/api/threads",
-          {
-            title: newThreadTitle,
-          },
+          "http://127.0.0.1:8000/api/threads/",
+          { title: newThreadTitle },
           {
             headers: {
-              Authorization: `Bearer ${accessToken}`, // Add Authorization header
+              Authorization: `Bearer ${accessToken}`,
             },
           }
         );
         const newThread = response.data;
         setThreads((prevThreads) => [newThread, ...prevThreads]);
-        setCurrentThreadId(newThread.id);
+        setCurrentThreadSlug(newThread.slug);
         setMessages([]);
         setNewThreadTitle("");
       } catch (error) {
@@ -122,31 +189,34 @@ const ChatApp: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full mx-auto">
-      {/* Sidebar for recent threads */}
       <div className="w-72 border-r bg-gray-100 border-gray-300 p-4 shadow-md flex flex-col">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           Recent Threads
         </h2>
-        <input
-          type="text"
-          value={newThreadTitle}
-          onChange={(e) => setNewThreadTitle(e.target.value)}
-          placeholder="New thread title"
-          className="p-2 border border-gray-300 rounded mb-4 w-full focus:outline-none focus:ring focus:ring-blue-500"
-        />
-        <button
-          onClick={handleNewThread}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200 shadow-md w-full mb-4"
-        >
-          Create New Thread
-        </button>
+        <div className="flex items-center mb-4">
+          <input
+            type="text"
+            value={newThreadTitle}
+            onChange={(e) => setNewThreadTitle(e.target.value)}
+            placeholder="Start a new chat..."
+            className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-500"
+          />
+          <button
+            onClick={handleNewThread}
+            className="ml-2 bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition duration-200 shadow-md"
+          >
+            +
+          </button>
+        </div>
         <div className="space-y-2 flex-grow overflow-y-auto">
           {threads.map((thread) => (
             <div
-              key={thread.id}
-              onClick={() => setCurrentThreadId(thread.id)}
+              key={thread.slug}
+              onClick={() => selectThread(thread.slug)}
               className={`p-3 rounded-lg cursor-pointer hover:bg-gray-200 transition duration-200 ${
-                thread.id === currentThreadId ? "bg-gray-300 font-semibold" : ""
+                thread.slug === currentThreadSlug
+                  ? "bg-gray-300 font-semibold"
+                  : ""
               }`}
             >
               {thread.title}
@@ -156,16 +226,14 @@ const ChatApp: React.FC = () => {
         <LogoutButton />
       </div>
 
-      {/* Main Chat Area */}
       <div className="flex flex-col p-6 w-full">
-        {currentThreadId && (
+        {currentThreadSlug && (
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            {threads.find((thread) => thread.id === currentThreadId)?.title ||
-              "Chat"}
+            Generated Content
           </h2>
         )}
-        <div className="flex flex-col h-full w-2/4 mx-auto">
-          <div className="flex-grow bg-white rounded-lg p-4 overflow-y-auto">
+        <div className="flex flex-col  w-2/4 mx-auto overflow-hidden ">
+          <div className="flex-grow bg-white rounded-lg p-4 overflow-y-auto ">
             {messages.map((msg, index) => (
               <div
                 key={index}
@@ -175,9 +243,7 @@ const ChatApp: React.FC = () => {
               >
                 <div
                   className={`relative p-3 rounded-lg ${
-                    msg.sender === "User"
-                      ? "bg-blue-500 text-white"
-                      : "bg-green-500 text-white"
+                    msg.sender === "User" ? "bg-gray-300" : "text-gray-800 "
                   }`}
                 >
                   {msg.text}
@@ -186,7 +252,6 @@ const ChatApp: React.FC = () => {
             ))}
           </div>
 
-          {/* Input Area */}
           <div className="mt-4 flex">
             <input
               type="text"

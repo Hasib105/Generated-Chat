@@ -29,8 +29,29 @@ class User(Document):
 
 class ChatThread(Document):
     title = StringField(max_length=100)
+    slug = StringField(blank=True, null=True, unique=True)  
     user = ReferenceField(User, null=True, reverse_delete_rule=4)  
     created_at = DateTimeField(default=datetime.utcnow)
+
+    def save(self, *args, **kwargs):
+        if self.title: 
+            self.slug = self._generate_unique_slug()
+        super(ChatThread, self).save(*args, **kwargs)
+
+    def _generate_unique_slug(self):
+        unique_slug = slugify(self.title)  # Use title for thread slug
+        count = 1
+        while ChatThread.objects(slug=unique_slug).first():
+            unique_slug = f"{slugify(self.title)}-{count}"
+            count += 1
+        return unique_slug
+
+    meta = {
+        'ordering': ['-created_at'],  # Changed to created_at for proper ordering
+        'indexes': [
+            {'fields': ['slug'], 'unique': True}  
+        ]
+    }
 
     def __str__(self):
         return self.title
@@ -49,7 +70,7 @@ class ChatMessage(Document):
         super(ChatMessage, self).save(*args, **kwargs)
 
     def _generate_unique_slug(self):
-        unique_slug = slugify(self.message)
+        unique_slug = slugify(self.message)  # Use message for message slug
         count = 1
         while ChatMessage.objects(slug=unique_slug).first():
             unique_slug = f"{slugify(self.message)}-{count}"
@@ -57,7 +78,7 @@ class ChatMessage(Document):
         return unique_slug
 
     meta = {
-        'ordering': ['-timestamp'],
+        'ordering': ['timestamp'],
         'indexes': [
             {'fields': ['slug'], 'unique': True}  
         ]

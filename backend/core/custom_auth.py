@@ -1,4 +1,4 @@
-# custom_auth.py
+# custom_auth.py  [Note This is for Django Template]
 from mongoengine import DoesNotExist
 from core.models import User  
 from django.contrib.auth.backends import BaseBackend

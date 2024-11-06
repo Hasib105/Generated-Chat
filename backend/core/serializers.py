@@ -46,8 +46,11 @@ class UserSerializer(serializers.Serializer):
     email = serializers.EmailField()
     created_at = serializers.DateTimeField()
 
+
+
 class ChatThreadSerializer(serializers.Serializer):
     title = serializers.CharField()
+    slug = serializers.CharField(read_only=True)
     user = UserSerializer(read_only=True)
     created_at = serializers.DateTimeField()
 
@@ -57,4 +60,4 @@ class ChatMessageSerializer(serializers.Serializer):
     message = serializers.CharField()
     response = serializers.CharField()
     timestamp = serializers.DateTimeField()
-    slug = serializers.CharField()
+    slug = serializers.CharField(read_only=True)
