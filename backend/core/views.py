@@ -92,13 +92,8 @@ class ChatAPIView(APIView):
             return Response({'error': 'Question are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Retrieve or create the chat thread with the specified slug
-        try:
-            chat_thread = ChatThread.objects.get(slug=slug, user=user)
-            created = False
-        except ChatThread.DoesNotExist:
-            chat_thread = ChatThread(slug=slug, user=user)
-            chat_thread.save()
-            created = True
+        
+        chat_thread = ChatThread.objects.get(slug=slug, user=user)
 
         # Check if a message with the same question already exists
         existing_message = ChatMessage.objects.filter(message=question).first()
@@ -118,7 +113,7 @@ class ChatAPIView(APIView):
             )
             return Response(existing_response, status=status.HTTP_201_CREATED)
 
-        # If no existing message, generate a new response
+
         gorq_response = self.get_chat_response(question)
         if not gorq_response:
             print(f"Error: Empty response from Groq for question: {question}")

@@ -54,8 +54,7 @@ class ChatThread(Document):
         ]
     }
 
-    def __str__(self):
-        return self.title
+
 
 class ChatMessage(Document):
     thread = ReferenceField(ChatThread, reverse_delete_rule=4) 

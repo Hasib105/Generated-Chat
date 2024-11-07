@@ -92,7 +92,6 @@ const ChatApp: React.FC = () => {
       setMessages((prevMessages) => [...prevMessages, userMessage]);
       setNewMessage("");
 
-      // Prepare the request body with the slug and question
       const requestBody = {
         question: newMessage,
         slug: currentThreadSlug,
@@ -139,6 +138,9 @@ const ChatApp: React.FC = () => {
           setCurrentThreadSlug(newThread.slug);
           setMessages([userMessage]);
 
+          // Save the new thread slug to localStorage
+          localStorage.setItem("lastThreadSlug", newThread.slug);
+
           // Send the user's message to the assistant for a response
           const assistantResponse = await axios.post(
             `http://127.0.0.1:8000/api/threads/chat/`, // Updated URL
@@ -157,6 +159,9 @@ const ChatApp: React.FC = () => {
             };
             setMessages((prevMessages) => [...prevMessages, assistantMessage]);
           }
+
+          // Refetch threads to ensure the latest list is displayed
+          fetchThreads();
         } catch (error) {
           console.error("Error creating new thread:", error);
         }
@@ -195,7 +200,7 @@ const ChatApp: React.FC = () => {
           ) : (
             threads.map((thread) => (
               <div
-                key={thread.id}
+                key={`${thread.id}-${thread.slug}`}
                 onClick={() => selectThread(thread.slug)}
                 className={`p-3 rounded-lg cursor-pointer hover:bg-gray-200 transition duration-200 ${
                   thread.slug === currentThreadSlug
