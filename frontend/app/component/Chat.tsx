@@ -86,100 +86,57 @@ const ChatApp: React.FC = () => {
     setMessages([]);
   };
 
-  const handleSend = async () => {
-    if (newMessage.trim()) {
-      const userMessage = { sender: "User", text: newMessage };
-      setMessages((prevMessages) => [...prevMessages, userMessage]);
-      setNewMessage("");
+const handleSend = async () => {
+  if (newMessage.trim()) {
+    const userMessage = { sender: "User", text: newMessage };
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setNewMessage("");
 
-      const requestBody = {
-        question: newMessage,
-        slug: currentThreadSlug,
-      };
-
-      if (currentThreadSlug) {
-        // Existing thread: send the message to it
-        try {
-          const response = await axios.post(
-            `http://127.0.0.1:8000/api/threads/chat/`, // Updated URL
-            requestBody,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-
-          if (response.status === 201) {
-            const assistantMessage = {
-              sender: "Assistant",
-              text: response.data.response,
-            };
-            setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-          }
-        } catch (error) {
-          console.error("Error sending message:", error);
+    try {
+      // Send the message and slug to the backend
+      const response = await axios.post(
+        `http://127.0.0.1:8000/api/threads/chat/`,
+        { question: newMessage, slug: currentThreadSlug },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      } else {
-        // Handle the case where there is no current thread
-        try {
-          const response = await axios.post(
-            "http://127.0.0.1:8000/api/threads/",
-            { title: newMessage }, // Create a new thread
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
+      );
 
-          const newThread = response.data;
-          setThreads((prevThreads) => [newThread, ...prevThreads]);
-          setCurrentThreadSlug(newThread.slug);
-          setMessages([userMessage]);
+      // Check if a new thread was created
+      const { new_thread_created, thread_slug, data } = response.data;
 
-          // Save the new thread slug to localStorage
-          localStorage.setItem("lastThreadSlug", newThread.slug);
-
-          // Send the user's message to the assistant for a response
-          const assistantResponse = await axios.post(
-            `http://127.0.0.1:8000/api/threads/chat/`, // Updated URL
-            { question: newMessage, slug: newThread.slug }, // Include new thread slug
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-
-          if (assistantResponse.status === 201) {
-            const assistantMessage = {
-              sender: "Assistant",
-              text: assistantResponse.data.response,
-            };
-            setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-          }
-
-          // Refetch threads to ensure the latest list is displayed
-          fetchThreads();
-        } catch (error) {
-          console.error("Error creating new thread:", error);
-        }
+      // If a new thread was created, update the current thread slug and localStorage
+      if (new_thread_created) {
+        setCurrentThreadSlug(thread_slug);
+        localStorage.setItem("lastThreadSlug", thread_slug);
+        fetchThreads(); // Refresh the list of threads
       }
-    } else {
-      console.warn("Cannot send an empty message.");
+
+      // Add the assistant's response to the messages
+      const assistantMessage = {
+        sender: "Assistant",
+        text: data.response,
+      };
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
     }
-  };
+  } else {
+    console.warn("Cannot send an empty message.");
+  }
+};
+
+
 
   const handleNewThread = () => {
-    const lastThreadSlug = localStorage.getItem("lastThreadSlug");
-    if (lastThreadSlug) {
-      localStorage.removeItem("lastThreadSlug");
-    }
-    setCurrentThreadSlug(null);
-    setMessages([]);
+    localStorage.removeItem("lastThreadSlug"); 
+    setCurrentThreadSlug(null); 
+    setMessages([]); 
     setNewMessage("");
   };
+
   return (
     <div className="flex h-screen w-full mx-auto">
       <div className="w-72 border-r bg-gray-100 border-gray-300 p-4 shadow-md flex flex-col">

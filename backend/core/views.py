@@ -83,43 +83,36 @@ class ChatAPIView(APIView):
     def post(self, request):
         user = request.user
         question = request.data.get('question')
-        slug = request.data.get('slug')  
-
-        # Debugging: Print received data to confirm structure
-        print("Received request data:", request.data)
+        slug = request.data.get('slug')
 
         if not question:
-            return Response({'error': 'Question are required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Question is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Retrieve or create the chat thread with the specified slug
-        
-        chat_thread = ChatThread.objects.get(slug=slug, user=user)
+        # Determine if a new thread needs to be created
+        new_thread_created = False
+        if not slug:
+            title = question[:30]  
+            existing_thread = ChatThread.objects.filter(title=title, user=user).first()
 
-        # Check if a message with the same question already exists
-        existing_message = ChatMessage.objects.filter(message=question).first()
-        if existing_message:
-            serializer = ChatMessageSerializer(existing_message)
-            existing_response = {
-                "message": serializer.data["message"],
-                "response": serializer.data["response"],
-                "sender": "Assistant",
-            }
-            # Save the repeated question/response pair in the database with current thread info
-            ChatMessage.objects.create(
-                thread=chat_thread,
-                user=user,
-                message=existing_message.message,
-                response=existing_message.response
-            )
-            return Response(existing_response, status=status.HTTP_201_CREATED)
-
+            if existing_thread:
+                chat_thread = existing_thread
+                slug = chat_thread.slug
+            else:
+                chat_thread = ChatThread(title=title, user=user)
+                chat_thread.save()
+                slug = chat_thread.slug
+                new_thread_created = True  # Set flag indicating a new thread was created
+        else:
+            try:
+                chat_thread = ChatThread.objects.get(slug=slug, user=user)
+            except ChatThread.DoesNotExist:
+                return Response({'error': 'ChatThread does not exist.'}, status=status.HTTP_404_NOT_FOUND)
 
         gorq_response = self.get_chat_response(question)
         if not gorq_response:
-            print(f"Error: Empty response from Groq for question: {question}")
             return Response({'error': 'Failed to generate a valid response.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Save the new question/response in the database
+        # Save the question/response in the database
         chat_message = ChatMessage(
             thread=chat_thread,
             user=user,
@@ -128,10 +121,13 @@ class ChatAPIView(APIView):
         )
         chat_message.save()
 
-        # Return the serialized new response
+        # Return the serialized response with the new thread flag
         serializer = ChatMessageSerializer(chat_message)
-        print('AI Generated:', serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({
+            "data": serializer.data,
+            "new_thread_created": new_thread_created,  # Send the flag to frontend
+            "thread_slug": slug  # Send the slug for frontend reference
+        }, status=status.HTTP_201_CREATED)
 
     def get_chat_response(self, question):
         system_message = {
@@ -142,6 +138,7 @@ class ChatAPIView(APIView):
             chat_completion = self.client.chat.completions.create(
                 messages=[system_message, {"role": "user", "content": question}],
                 model="llama3-8b-8192",
+                max_tokens=20,
             )
             response_content = chat_completion.choices[0].message.content
             print("Groq Response:", response_content)
