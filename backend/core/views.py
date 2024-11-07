@@ -80,17 +80,25 @@ class ChatAPIView(APIView):
         super().__init__(**kwargs)
         self.client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    def post(self, request, slug):
+    def post(self, request):
         user = request.user
         question = request.data.get('question')
+        slug = request.data.get('slug')  
+
+        # Debugging: Print received data to confirm structure
+        print("Received request data:", request.data)
 
         if not question:
-            return Response({'error': 'Question is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Question are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Retrieve or create the chat thread with the specified slug
         try:
             chat_thread = ChatThread.objects.get(slug=slug, user=user)
+            created = False
         except ChatThread.DoesNotExist:
-            return Response({'error': 'Thread not found.'}, status=status.HTTP_404_NOT_FOUND)
+            chat_thread = ChatThread(slug=slug, user=user)
+            chat_thread.save()
+            created = True
 
         # Check if a message with the same question already exists
         existing_message = ChatMessage.objects.filter(message=question).first()
@@ -99,24 +107,24 @@ class ChatAPIView(APIView):
             existing_response = {
                 "message": serializer.data["message"],
                 "response": serializer.data["response"],
-                "sender": "Assistant",  # or "User" based on your logic
+                "sender": "Assistant",
             }
-            chat_message = ChatMessage(
+            # Save the repeated question/response pair in the database with current thread info
+            ChatMessage.objects.create(
                 thread=chat_thread,
                 user=user,
                 message=existing_message.message,
                 response=existing_message.response
             )
-            chat_message.save()
             return Response(existing_response, status=status.HTTP_201_CREATED)
-        # If the message doesn't exist, generate a new response using the AI model
-        gorq_response = self.get_chat_response(question)
 
+        # If no existing message, generate a new response
+        gorq_response = self.get_chat_response(question)
         if not gorq_response:
-            print(f"Error: Empty response from Groq for question: {question}")  # Log the error
+            print(f"Error: Empty response from Groq for question: {question}")
             return Response({'error': 'Failed to generate a valid response.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Save the new message and response to the database
+        # Save the new question/response in the database
         chat_message = ChatMessage(
             thread=chat_thread,
             user=user,
@@ -125,31 +133,24 @@ class ChatAPIView(APIView):
         )
         chat_message.save()
 
-        # Serialize and return the new message with the AI response
+        # Return the serialized new response
         serializer = ChatMessageSerializer(chat_message)
-        print('AI Generated:', serializer.data)  # Log AI response data
+        print('AI Generated:', serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def get_chat_response(self, question):
-        # Predefined system message for the AI model
         system_message = {
             "role": "system",
             "content": "You are an intelligent assistant. Please provide informative and helpful responses."
         }
-
         try:
             chat_completion = self.client.chat.completions.create(
-                messages=[
-                    system_message,
-                    {"role": "user", "content": question},
-                ],
+                messages=[system_message, {"role": "user", "content": question}],
                 model="llama3-8b-8192",
             )
             response_content = chat_completion.choices[0].message.content
-            print("Groq Response:", response_content)  # Log the response
+            print("Groq Response:", response_content)
             return response_content
         except Exception as e:
-            print(f"Error generating AI response: {str(e)}")  # Log the error
+            print(f"Error generating AI response: {str(e)}")
             return f"Error: {str(e)}"
-
-

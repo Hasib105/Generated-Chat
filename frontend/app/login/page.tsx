@@ -64,7 +64,7 @@ export default function Login() {
             className={`mt-1 block w-full border p-2 ${
               errors.username ? "border-red-500" : "border-gray-300"
             } rounded-md shadow-sm focus:outline-none focus:ring-2 ${
-              errors.username ? "focus:ring-red-500" : "focus:ring-blue-500"
+              errors.username ? "focus:ring-red-500" : "focus:ring-rose-500"
             }`}
           />
           {errors.username && (
@@ -88,7 +88,7 @@ export default function Login() {
             className={`mt-1 block w-full border p-2 ${
               errors.password ? "border-red-500" : "border-gray-300"
             } rounded-md shadow-sm focus:outline-none focus:ring-2 ${
-              errors.password ? "focus:ring-red-500" : "focus:ring-blue-500"
+              errors.password ? "focus:ring-red-500" : "focus:ring-rose-500"
             }`}
           />
           {errors.password && (
@@ -100,10 +100,22 @@ export default function Login() {
 
         <button
           type="submit"
-          className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
         >
           Login
         </button>
+
+        {/* Register Link */}
+        <p className="text-center text-sm mt-4">
+          Don't have an account?{" "}
+          <button
+          type="button"
+            onClick={() => router.push('/register')}
+            className="text-rose-600 hover:underline"
+          >
+            Register here
+          </button>
+        </p>
       </form>
     </div>
   );

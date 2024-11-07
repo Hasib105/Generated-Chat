@@ -79,7 +79,7 @@ export default function Register() {
             className={`mt-1 block w-full border p-2 ${
               errors.username ? "border-red-500" : "border-gray-300"
             } rounded-md shadow-sm focus:outline-none focus:ring-2 ${
-              errors.username ? "focus:ring-red-500" : "focus:ring-blue-500"
+              errors.username ? "focus:ring-red-500" : "focus:ring-rose-500"
             }`}
           />
           {errors.username && (
@@ -103,7 +103,7 @@ export default function Register() {
             className={`mt-1 block w-full border p-2 ${
               errors.email ? "border-red-500" : "border-gray-300"
             } rounded-md shadow-sm focus:outline-none focus:ring-2 ${
-              errors.email ? "focus:ring-red-500" : "focus:ring-blue-500"
+              errors.email ? "focus:ring-red-500" : "focus:ring-rose-500"
             }`}
           />
           {errors.email && (
@@ -125,7 +125,7 @@ export default function Register() {
             className={`mt-1 block w-full border p-2 ${
               errors.password ? "border-red-500" : "border-gray-300"
             } rounded-md shadow-sm focus:outline-none focus:ring-2 ${
-              errors.password ? "focus:ring-red-500" : "focus:ring-blue-500"
+              errors.password ? "focus:ring-red-500" : "focus:ring-rose-500"
             }`}
           />
           {errors.password && (
@@ -155,7 +155,7 @@ export default function Register() {
             } rounded-md shadow-sm focus:outline-none focus:ring-2 ${
               errors.retypePassword
                 ? "focus:ring-red-500"
-                : "focus:ring-blue-500"
+                : "focus:ring-rose-500"
             }`}
           />
           {errors.retypePassword && (
@@ -167,10 +167,22 @@ export default function Register() {
 
         <button
           type="submit"
-          className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
         >
           Register
         </button>
+
+        {/* Login Link */}
+        <p className="text-center text-sm mt-4">
+          Already have an account?{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/login")}
+            className="text-rose-600 hover:underline"
+          >
+            Login here
+          </button>
+        </p>
       </form>
     </div>
   );

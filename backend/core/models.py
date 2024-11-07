@@ -39,9 +39,10 @@ class ChatThread(Document):
         super(ChatThread, self).save(*args, **kwargs)
 
     def _generate_unique_slug(self):
-        unique_slug = slugify(self.title)  # Use title for thread slug
+        unique_slug = slugify(self.title)
         count = 1
-        while ChatThread.objects(slug=unique_slug).first():
+        # Ensure uniqueness by also considering the user in the filter
+        while ChatThread.objects(slug=unique_slug, user=self.user).first():
             unique_slug = f"{slugify(self.title)}-{count}"
             count += 1
         return unique_slug

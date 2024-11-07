@@ -11,7 +11,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   
     path('threads/', ThreadListCreateAPIView.as_view(), name='thread-list-create'),
     path('threads/<slug:slug>/messages/', MessageListAPIView.as_view(), name='message-list'),
-    path('threads/<slug:slug>/chat/', ChatAPIView.as_view(), name='chat'),
+    path('threads/chat/', ChatAPIView.as_view(), name='chat'),
 
 ]
 

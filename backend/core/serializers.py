@@ -49,6 +49,7 @@ class UserSerializer(serializers.Serializer):
 
 
 class ChatThreadSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
     title = serializers.CharField()
     slug = serializers.CharField(read_only=True)
     user = UserSerializer(read_only=True)
