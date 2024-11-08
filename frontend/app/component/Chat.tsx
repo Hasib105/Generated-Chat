@@ -4,6 +4,8 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import LogoutButton from "./LogoutButton";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown"; // Import react-markdown
+import gfm from "remark-gfm"; // Import remark-gfm for GitHub Flavored Markdown support
 
 interface Message {
   sender: "User" | "Assistant";
@@ -30,12 +32,9 @@ const ChatApp: React.FC = () => {
   useEffect(() => {
     fetchThreads();
 
-    // Check for last thread slug in localStorage
-    if (typeof window !== "undefined") {
-      const lastThreadSlug = localStorage.getItem("lastThreadSlug");
-      if (lastThreadSlug) {
-        setCurrentThreadSlug(lastThreadSlug);
-      }
+    const lastThreadSlug = localStorage.getItem("lastThreadSlug");
+    if (lastThreadSlug) {
+      setCurrentThreadSlug(lastThreadSlug);
     }
   }, []);
 
@@ -87,54 +86,52 @@ const ChatApp: React.FC = () => {
     setMessages([]);
   };
 
-const handleSend = async () => {
-  if (newMessage.trim()) {
-    const userMessage = { sender: "User", text: newMessage };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    setNewMessage("");
+  const handleSend = async () => {
+    if (newMessage.trim()) {
+      const userMessage = { sender: "User", text: newMessage };
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
+      setNewMessage("");
 
-    try {
-      // Send the message and slug to the backend
-      const response = await axios.post(
-        `http://127.0.0.1:8000/api/threads/chat/`,
-        { question: newMessage, slug: currentThreadSlug },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+      try {
+        // Send the message and slug to the backend
+        const response = await axios.post(
+          `http://127.0.0.1:8000/api/threads/chat/`,
+          { question: newMessage, slug: currentThreadSlug },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        // Check if a new thread was created
+        const { new_thread_created, thread_slug, data } = response.data;
+
+        // If a new thread was created, update the current thread slug and localStorage
+        if (new_thread_created) {
+          setCurrentThreadSlug(thread_slug);
+          localStorage.setItem("lastThreadSlug", thread_slug);
+          fetchThreads(); // Refresh the list of threads
         }
-      );
 
-      // Check if a new thread was created
-      const { new_thread_created, thread_slug, data } = response.data;
-
-      // If a new thread was created, update the current thread slug and localStorage
-      if (new_thread_created) {
-        setCurrentThreadSlug(thread_slug);
-        localStorage.setItem("lastThreadSlug", thread_slug);
-        fetchThreads(); // Refresh the list of threads
+        // Add the assistant's response to the messages
+        const assistantMessage = {
+          sender: "Assistant",
+          text: data.response,
+        };
+        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      } catch (error) {
+        console.error("Error sending message:", error);
       }
-
-      // Add the assistant's response to the messages
-      const assistantMessage = {
-        sender: "Assistant",
-        text: data.response,
-      };
-      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-    } catch (error) {
-      console.error("Error sending message:", error);
+    } else {
+      console.warn("Cannot send an empty message.");
     }
-  } else {
-    console.warn("Cannot send an empty message.");
-  }
-};
-
-
+  };
 
   const handleNewThread = () => {
-    localStorage.removeItem("lastThreadSlug"); 
-    setCurrentThreadSlug(null); 
-    setMessages([]); 
+    localStorage.removeItem("lastThreadSlug");
+    setCurrentThreadSlug(null);
+    setMessages([]);
     setNewMessage("");
   };
 
@@ -175,9 +172,9 @@ const handleSend = async () => {
           <button
             type="button"
             onClick={() => router.push("/settings")}
-            className="outline outline-1 outline-zinc-800px-2 py-2 rounded-md w-full transition duration-200 "
+            className="outline outline-1 outline-zinc-800px-2 py-2 rounded-md w-full transition duration-200"
           >
-            Settings
+            Model Settings
           </button>
           <LogoutButton />
         </div>
@@ -203,7 +200,11 @@ const handleSend = async () => {
                     msg.sender === "User" ? "bg-gray-300" : "text-gray-800"
                   }`}
                 >
-                  {msg.text}
+                  {msg.sender === "Assistant" ? (
+                    <ReactMarkdown children={msg.text} remarkPlugins={[gfm]} />
+                  ) : (
+                    msg.text
+                  )}
                 </div>
               </div>
             ))}
