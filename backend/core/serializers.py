@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
-from core.models import User, ChatThread, ChatMessage
+from core.models import User, ChatThread, ChatMessage,Settings
 
 # Serializer for User Registration
 class UserRegisterSerializer(serializers.Serializer):
@@ -62,3 +62,19 @@ class ChatMessageSerializer(serializers.Serializer):
     response = serializers.CharField()
     timestamp = serializers.DateTimeField()
     slug = serializers.CharField(read_only=True)
+
+
+class SettingsSerializer(serializers.Serializer):
+    user = UserSerializer(read_only=True)  # Read-only field to display user info, if needed
+    model = serializers.ChoiceField(choices=Settings.model_choices)
+    max_tokens = serializers.IntegerField(default=200)
+    customize_response = serializers.CharField(
+        default="You are an intelligent assistant. Please provide informative and helpful responses."
+    )
+
+    def update(self, instance, validated_data):
+        instance.model = validated_data.get('model', instance.model)
+        instance.max_tokens = validated_data.get('max_tokens', instance.max_tokens)
+        instance.customize_response = validated_data.get('customize_response', instance.customize_response)
+        instance.save()  
+        return instance

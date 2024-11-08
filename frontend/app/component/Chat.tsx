@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 import LogoutButton from "./LogoutButton";
-
+import { useRouter } from "next/navigation";
 
 interface Message {
   sender: "User" | "Assistant";
@@ -25,6 +25,7 @@ const ChatApp: React.FC = () => {
   const [newMessage, setNewMessage] = useState<string>("");
 
   const accessToken = Cookies.get("access_token");
+  const router = useRouter();
 
   useEffect(() => {
     fetchThreads();
@@ -145,7 +146,7 @@ const handleSend = async () => {
         </h2>
         <button
           onClick={handleNewThread}
-          className="mb-4 bg-zinc-800 text-white px-2 py-1 rounded hover:bg-zinc-900 transition duration-200 shadow-md"
+          className="mb-4 bg-zinc-800 text-white px-2 py-2 rounded-md hover:bg-zinc-900 transition duration-200 shadow-md"
         >
           New Thread
         </button>
@@ -170,7 +171,16 @@ const handleSend = async () => {
             ))
           )}
         </div>
-        <LogoutButton />
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => router.push("/settings")}
+            className="outline outline-1 outline-zinc-800px-2 py-2 rounded-md w-full transition duration-200 "
+          >
+            Settings
+          </button>
+          <LogoutButton />
+        </div>
       </div>
 
       <div className="flex flex-col p-6 w-full">
